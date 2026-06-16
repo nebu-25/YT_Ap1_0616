@@ -16,9 +16,10 @@ import { downloadCsv, videosToCsv } from "@/lib/csv";
 import { velocity } from "@/lib/metrics";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
+import { isCuratedTopic, type CuratedTopic } from "@/lib/topics";
 import type { Category, SortKey, LengthBucket, VideoItem } from "@/lib/types";
 
-type Topic = "it" | "space";
+type Topic = CuratedTopic;
 
 const DEFAULT_STATE: ControlsState = {
   regionCode: "KR",
@@ -55,7 +56,7 @@ export default function Home() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const t = p.get("topic");
-    if (t === "it" || t === "space") {
+    if (t && isCuratedTopic(t)) {
       setTopic(t);
       setMax(30);
     }
@@ -130,7 +131,7 @@ export default function Home() {
     [rawVideos, state]
   );
 
-  const onPreset = (p: "top100" | "it" | "space") => {
+  const onPreset = (p: "top100" | CuratedTopic) => {
     if (p === "top100") {
       setTopic(null);
       setMax(100);
@@ -164,9 +165,9 @@ export default function Home() {
     <main className="container">
       <div className="header">
         <div>
-          <h1>📊 YouTube 트렌드 분석</h1>
+          <h1>🧑‍💻 개발·IT·AI 영상 트렌드</h1>
           <span className="sub">
-            지역·카테고리별 급상승 영상을 지표·집계로 분석
+            개발·IT·AI 유튜브에서 뜨는 기술과 시청자 반응을 한눈에
           </span>
         </div>
         <div

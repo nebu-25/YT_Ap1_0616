@@ -5,7 +5,8 @@ import {
   getRequestApiKey,
   missingKeyResponse,
 } from "@/lib/route-helpers";
-import { fetchCurated, isCuratedTopic, type QuotaCost } from "@/lib/youtube";
+import { fetchCurated, type QuotaCost } from "@/lib/youtube";
+import { isCuratedTopic } from "@/lib/topics";
 
 export async function GET(req: NextRequest) {
   const apiKey = getRequestApiKey(req);
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const regionCode = sp.get("regionCode") || "KR";
-  const topicParam = sp.get("topic") || "it";
+  const topicParam = sp.get("topic") || "ai";
   const max = Math.min(50, Math.max(1, Number(sp.get("max")) || 30));
 
   if (!isCuratedTopic(topicParam)) {

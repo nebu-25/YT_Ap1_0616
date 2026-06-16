@@ -1,6 +1,7 @@
 "use client";
 
 import type { Category, LengthBucket, SortKey } from "@/lib/types";
+import type { CuratedTopic } from "@/lib/topics";
 import { REGIONS } from "@/lib/regions";
 
 export interface ControlsState {
@@ -13,7 +14,7 @@ export interface ControlsState {
   view: "grid" | "list";
 }
 
-export type Preset = "top100" | "it" | "space" | "custom";
+export type Preset = "top100" | CuratedTopic | "custom";
 
 interface Props {
   state: ControlsState;
@@ -51,7 +52,7 @@ export default function Controls({
   onExport,
   onRefresh,
 }: Props) {
-  const curated = preset === "it" || preset === "space";
+  const curated = preset !== "top100" && preset !== "custom";
   return (
     <div className="controls">
       <div className="field">
@@ -77,7 +78,7 @@ export default function Controls({
           disabled={curated}
           title={
             curated
-              ? "IT·우주/천문 프리셋에서는 카테고리 필터가 적용되지 않습니다"
+              ? "큐레이션 주제에서는 카테고리 필터가 적용되지 않습니다"
               : undefined
           }
           onChange={(e) => onChange({ categoryId: e.target.value })}

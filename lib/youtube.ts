@@ -1,5 +1,6 @@
 import { getCached, setCached } from "./cache";
 import { engagementRate, parseISODuration, velocity } from "./metrics";
+import type { CuratedTopic } from "./topics";
 import type { Category, CommentItem, VideoItem } from "./types";
 
 const API_BASE = "https://www.googleapis.com/youtube/v3";
@@ -261,53 +262,104 @@ export async function fetchTrending(
   return result;
 }
 
-/* ----------------------- Curated: IT · 우주/천문 ----------------------- */
+/* ----------------- Curated: 개발·IT·AI 버티컬 (주제별) ----------------- */
 
 interface SearchResponse {
   items: { id: { videoId?: string } }[];
 }
 
 /**
- * 주제별 큐레이션 카테고리. 급상승 차트에는 이 주제가 거의 없어,
- * search.list로 키워드 기반 수집한 뒤 videos.list로 통계를 채우고 숏츠를 제외한다.
- *
- * 국가별로 결과가 달라지도록, 지역 언어에 맞는 검색어 + relevanceLanguage를 사용한다.
- * 지원 언어가 없으면 영어(en)로 폴백.
+ * 주제별 큐레이션 검색어. 급상승 차트에는 이 주제가 드물어, search.list로 키워드
+ * 수집 후 videos.list로 통계를 채우고 숏츠를 제외한다. 국가별 차등을 위해 지역
+ * 언어 검색어 + relevanceLanguage 사용(미지원 언어는 영어 폴백). 기술 용어는 영어
+ * 차용이 많아 타 언어 검색어에도 영문 토큰을 일부 섞는다.
  *
  * 비용: search.list = 100유닛 + videos.list = 1유닛 (사용자 키 기준, 10분 캐시).
+ * 키는 lib/topics.ts의 CuratedTopic과 1:1 대응.
  */
-export const CURATED_TOPICS = {
-  it: {
-    label: "IT",
-    queries: {
-      ko: "IT 인공지능 반도체 기술 리뷰 개발",
-      en: "tech AI semiconductor gadget review software",
-      ja: "IT テクノロジー AI 半導体 ガジェット レビュー",
-      de: "Technik KI Halbleiter Gadget Test Software",
-      es: "tecnología IA inteligencia artificial chip review software",
-      ru: "технологии ИИ искусственный интеллект процессор обзор",
-      "zh-Hant": "科技 人工智慧 半導體 評測 軟體",
-    } as Record<string, string>,
+const CURATED_QUERIES: Record<CuratedTopic, Record<string, string>> = {
+  ai: {
+    ko: "인공지능 AI LLM 머신러닝 딥러닝 GPT 모델",
+    en: "artificial intelligence AI LLM machine learning deep learning GPT",
+    ja: "AI 人工知能 機械学習 ディープラーニング LLM GPT",
+    de: "künstliche Intelligenz KI maschinelles Lernen Deep Learning LLM",
+    es: "inteligencia artificial IA aprendizaje automático deep learning LLM",
+    ru: "искусственный интеллект ИИ машинное обучение нейросети LLM",
+    "zh-Hant": "人工智慧 AI 機器學習 深度學習 大語言模型 GPT",
   },
-  space: {
-    label: "우주/천문",
-    queries: {
-      ko: "우주 천문학 천체 망원경 NASA 블랙홀 우주탐사",
-      en: "space astronomy universe telescope NASA black hole cosmos",
-      ja: "宇宙 天文学 望遠鏡 NASA ブラックホール 銀河",
-      de: "Weltraum Astronomie Universum Teleskop NASA schwarzes Loch",
-      es: "espacio astronomía universo telescopio NASA agujero negro",
-      ru: "космос астрономия вселенная телескоп NASA чёрная дыра",
-      "zh-Hant": "太空 天文學 宇宙 望遠鏡 NASA 黑洞",
-    } as Record<string, string>,
+  lang: {
+    ko: "프로그래밍 언어 Python Rust Go 자바 타입스크립트 문법",
+    en: "programming language Python Rust Go Java TypeScript tutorial",
+    ja: "プログラミング言語 Python Rust Go Java TypeScript 入門",
+    de: "Programmiersprache Python Rust Go Java TypeScript Tutorial",
+    es: "lenguaje de programación Python Rust Go Java TypeScript",
+    ru: "язык программирования Python Rust Go Java TypeScript",
+    "zh-Hant": "程式語言 Python Rust Go Java TypeScript 教學",
   },
-} as const;
-
-export type CuratedTopic = keyof typeof CURATED_TOPICS;
-
-export function isCuratedTopic(v: string): v is CuratedTopic {
-  return v in CURATED_TOPICS;
-}
+  frontend: {
+    ko: "프론트엔드 React Vue 자바스크립트 CSS 웹 개발 UI",
+    en: "frontend React Vue JavaScript CSS web development UI",
+    ja: "フロントエンド React Vue JavaScript CSS ウェブ開発",
+    de: "Frontend React Vue JavaScript CSS Webentwicklung",
+    es: "frontend React Vue JavaScript CSS desarrollo web",
+    ru: "фронтенд React Vue JavaScript CSS веб разработка",
+    "zh-Hant": "前端 React Vue JavaScript CSS 網頁開發",
+  },
+  backend: {
+    ko: "백엔드 API 서버 데이터베이스 Node Spring Django",
+    en: "backend API server database Node Spring Django REST",
+    ja: "バックエンド API サーバー データベース Node Spring Django",
+    de: "Backend API Server Datenbank Node Spring Django",
+    es: "backend API servidor base de datos Node Spring Django",
+    ru: "бэкенд API сервер база данных Node Spring Django",
+    "zh-Hant": "後端 API 伺服器 資料庫 Node Spring Django",
+  },
+  swdev: {
+    ko: "소프트웨어 개발 아키텍처 설계 테스트 코드 리뷰 개발자 커리어",
+    en: "software engineering architecture design patterns testing developer career",
+    ja: "ソフトウェア開発 設計 アーキテクチャ テスト エンジニア キャリア",
+    de: "Softwareentwicklung Architektur Design Pattern Testing Entwickler Karriere",
+    es: "desarrollo de software arquitectura diseño testing carrera programador",
+    ru: "разработка ПО архитектура проектирование тестирование карьера разработчика",
+    "zh-Hant": "軟體開發 架構 設計模式 測試 工程師 職涯",
+  },
+  data: {
+    ko: "데이터 엔지니어링 데이터베이스 SQL 빅데이터 분석 파이프라인",
+    en: "data engineering database SQL big data analytics pipeline",
+    ja: "データエンジニアリング データベース SQL ビッグデータ 分析",
+    de: "Data Engineering Datenbank SQL Big Data Analyse Pipeline",
+    es: "ingeniería de datos base de datos SQL big data análisis",
+    ru: "инженерия данных база данных SQL большие данные аналитика",
+    "zh-Hant": "資料工程 資料庫 SQL 大數據 分析 資料管線",
+  },
+  cloud: {
+    ko: "클라우드 AWS 쿠버네티스 도커 DevOps CI/CD 인프라",
+    en: "cloud AWS Kubernetes Docker DevOps CI/CD infrastructure",
+    ja: "クラウド AWS Kubernetes Docker DevOps インフラ",
+    de: "Cloud AWS Kubernetes Docker DevOps CI/CD Infrastruktur",
+    es: "cloud AWS Kubernetes Docker DevOps CI/CD infraestructura",
+    ru: "облако AWS Kubernetes Docker DevOps инфраструктура",
+    "zh-Hant": "雲端 AWS Kubernetes Docker DevOps 基礎設施",
+  },
+  semicon: {
+    ko: "반도체 GPU CPU 하드웨어 칩 그래픽카드 가젯",
+    en: "semiconductor GPU CPU hardware chip graphics card gadget",
+    ja: "半導体 GPU CPU ハードウェア チップ グラフィックボード",
+    de: "Halbleiter GPU CPU Hardware Chip Grafikkarte Gadget",
+    es: "semiconductor GPU CPU hardware chip tarjeta gráfica",
+    ru: "полупроводники GPU CPU железо чип видеокарта",
+    "zh-Hant": "半導體 GPU CPU 硬體 晶片 顯示卡",
+  },
+  security: {
+    ko: "보안 해킹 사이버보안 취약점 침투 테스트 암호화",
+    en: "security hacking cybersecurity vulnerability pentest exploit",
+    ja: "セキュリティ ハッキング サイバーセキュリティ 脆弱性 暗号化",
+    de: "Sicherheit Hacking Cybersecurity Schwachstelle Pentest",
+    es: "seguridad hacking ciberseguridad vulnerabilidad pentest",
+    ru: "безопасность хакинг кибербезопасность уязвимость пентест",
+    "zh-Hant": "資安 駭客 網路安全 漏洞 滲透測試",
+  },
+};
 
 /**
  * 지역(regionCode) → 검색 언어(relevanceLanguage) 매핑.
@@ -346,7 +398,7 @@ export async function fetchCurated(
   ).toISOString();
 
   const lang = LANG_BY_REGION[regionCode] || "en";
-  const queries = CURATED_TOPICS[topic].queries;
+  const queries = CURATED_QUERIES[topic];
   const q = queries[lang] || queries.en;
 
   const search = await ytFetch<SearchResponse>(

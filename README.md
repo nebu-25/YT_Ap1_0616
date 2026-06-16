@@ -1,12 +1,12 @@
-# YouTube 트렌드 분석 툴
+# 개발·IT·AI 영상 트렌드
 
-지역·카테고리별 급상승 동영상(TOP 100)과 주제별 큐레이션(IT · 우주/천문)을 **분석 지표**(engagement rate · velocity)와 **집계**(채널 랭킹 · 키워드 빈도 · 길이/시간대 분포)로 보여주고, 영상별 댓글을 조회하는 Next.js 앱입니다. 숏츠(60초 이하)는 전 구간에서 제외합니다.
+**개발자·IT·AI** 유튜브에서 뜨는 기술과 시청자 반응을 보여주는 버티컬 트렌드 툴입니다. 급상승 동영상(TOP 100)과 **개발·IT·AI 주제별 큐레이션**(AI/LLM · 컴퓨터 언어 · 웹 프론트/백엔드 · 소프트웨어 개발 · 데이터 · 클라우드/DevOps · 반도체 · 보안)을 **분석 지표**(engagement rate · velocity)와 **집계**(채널 랭킹 · 키워드 빈도 · 길이/시간대 분포)로 보여주고, 영상별 댓글을 분석하는 Next.js 앱입니다. 숏츠(60초 이하)는 전 구간에서 제외합니다.
 
 ## 주요 기능
 
 - 🌍 **국가 선택** — 지역(regionCode)별 급상승 트렌드
 - 🔥 **급상승 TOP 100** — 카테고리별 필터 (50개×2페이지 페이징, 숏츠 제외)
-- 🛰️ **큐레이션 TOP 30** — IT · 우주/천문 프리셋 (국가별 검색어 현지화, `search.list` 기반)
+- 🧑‍💻 **개발·IT·AI 주제 큐레이션 TOP 30** — 9개 주제 프리셋 (국가별 검색어 현지화, `search.list` 기반)
 - 📊 **분석 지표** — engagement rate(`(좋아요+댓글)/조회수`), velocity(`조회수/업로드후경과시간`)
 - 🔠 **정렬·필터** — 조회수/좋아요/댓글/engagement/velocity/최신, 최소 조회수·검색·길이 필터
 - 📈 **집계 시각화** — 채널 랭킹, 키워드·태그 빈도, 길이/업로드 시간대 분포
@@ -47,7 +47,7 @@ npm run dev
 | --- | --- |
 | `GET /api/categories?regionCode=KR` | 지역별 영상 카테고리 목록 |
 | `GET /api/trending?regionCode=KR&categoryId=10&max=100` | 급상승 영상 (지표 계산 포함, `categoryId`는 선택) |
-| `GET /api/curated?regionCode=KR&topic=it&max=30` | 주제별 큐레이션 (`topic`=`it`\|`space`) |
+| `GET /api/curated?regionCode=KR&topic=ai&max=30` | 주제별 큐레이션 (`topic`=`ai`\|`lang`\|`frontend`\|`backend`\|`swdev`\|`data`\|`cloud`\|`semicon`\|`security`) |
 | `GET /api/comments?videoId=...&order=relevance&max=30` | 영상 댓글 |
 
 모든 라우트는 사용자 키를 `x-youtube-api-key` 헤더로 받으며, 키가 없으면 401을 반환합니다.

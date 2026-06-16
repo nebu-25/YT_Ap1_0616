@@ -200,6 +200,11 @@ input {
   padding: 4px 8px 10px;
 }
 
+/* 사이드바에 그룹이 둘 이상일 때 다음 그룹 제목에 간격 */
+.sidebar-nav + .sidebar-title {
+  padding-top: 14px;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
