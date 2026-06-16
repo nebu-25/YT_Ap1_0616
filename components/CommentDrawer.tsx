@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import type { CommentsResponse, VideoItem } from "@/lib/types";
@@ -15,6 +15,22 @@ interface Props {
 
 export default function CommentDrawer({ video, apiKey, onClose }: Props) {
   const [order, setOrder] = useState<"relevance" | "time">("relevance");
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Esc로 닫기 + 열릴 때 닫기 버튼에 포커스 + 닫힐 때 직전 포커스 복원
+  useEffect(() => {
+    const prevFocus = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      prevFocus?.focus();
+    };
+  }, [onClose]);
+
   const { data, error, isLoading } = useSWR<CommentsResponse>(
     apiKey
       ? [`/api/comments?videoId=${video.id}&order=${order}&max=50`, apiKey]
@@ -24,8 +40,13 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
 
   return (
     <>
-      <div className="drawer-overlay" onClick={onClose} />
-      <aside className="drawer">
+      <div className="drawer-overlay" onClick={onClose} aria-hidden="true" />
+      <aside
+        className="drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${video.title} 댓글`}
+      >
         <div className="drawer-head">
           <div style={{ overflow: "hidden" }}>
             <div
@@ -43,7 +64,12 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
               댓글 {formatCount(video.comments)}개 · {video.channelTitle}
             </div>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="닫기">
+          <button
+            ref={closeRef}
+            className="icon-btn"
+            onClick={onClose}
+            aria-label="닫기"
+          >
             ✕
           </button>
         </div>

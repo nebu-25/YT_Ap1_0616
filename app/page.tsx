@@ -230,14 +230,22 @@ export default function Home() {
               </div>
             )}
 
-            <div className="tabs">
+            <div className="tabs" role="tablist" aria-label="보기 전환">
               <button
+                role="tab"
+                id="tab-list"
+                aria-selected={tab === "list"}
+                aria-controls="panel-list"
                 className={`tab ${tab === "list" ? "active" : ""}`}
                 onClick={() => setTab("list")}
               >
                 영상 목록 ({videos.length})
               </button>
               <button
+                role="tab"
+                id="tab-analytics"
+                aria-selected={tab === "analytics"}
+                aria-controls="panel-analytics"
                 className={`tab ${tab === "analytics" ? "active" : ""}`}
                 onClick={() => setTab("analytics")}
               >
@@ -245,17 +253,23 @@ export default function Home() {
               </button>
             </div>
 
-            {isLoading ? (
-              <Skeletons view={state.view} />
-            ) : tab === "list" ? (
-              <VideoList
-                videos={videos}
-                view={state.view}
-                onOpenComments={setActive}
-              />
-            ) : (
-              <Analytics videos={videos} categories={categories} />
-            )}
+            <div
+              role="tabpanel"
+              id={tab === "list" ? "panel-list" : "panel-analytics"}
+              aria-labelledby={tab === "list" ? "tab-list" : "tab-analytics"}
+            >
+              {isLoading ? (
+                <Skeletons view={state.view} />
+              ) : tab === "list" ? (
+                <VideoList
+                  videos={videos}
+                  view={state.view}
+                  onOpenComments={setActive}
+                />
+              ) : (
+                <Analytics videos={videos} categories={categories} />
+              )}
+            </div>
           </section>
         </div>
       )}
