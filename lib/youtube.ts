@@ -114,7 +114,46 @@ function pickThumb(
   );
 }
 
-/** mostPopular 차트를 max개까지 페이징 수집 (categoryId 지정 가능) */
+type RawVideo = VideoListResponse["items"][number];
+
+/** 숏츠 판정 기준: 이 길이 이하(초)는 숏츠로 간주해 전 구간에서 제외 */
+export const SHORTS_MAX_SEC = 60;
+
+function isShorts(durationSec: number): boolean {
+  // duration이 0인 경우(라이브 등)는 숏츠가 아님 → 유지
+  return durationSec > 0 && durationSec <= SHORTS_MAX_SEC;
+}
+
+/** 원본 videos.list 항목을 VideoItem으로 정규화 */
+function mapVideo(v: RawVideo): VideoItem {
+  const views = Number(v.statistics?.viewCount || 0);
+  const likes = Number(v.statistics?.likeCount || 0);
+  const comments = Number(v.statistics?.commentCount || 0);
+  return {
+    id: v.id,
+    title: v.snippet.title,
+    description: v.snippet.description,
+    channelId: v.snippet.channelId,
+    channelTitle: v.snippet.channelTitle,
+    categoryId: v.snippet.categoryId,
+    publishedAt: v.snippet.publishedAt,
+    thumbnail: pickThumb(v.snippet.thumbnails),
+    tags: v.snippet.tags || [],
+    views,
+    likes,
+    comments,
+    durationSec: parseISODuration(v.contentDetails?.duration),
+    engagementRate: engagementRate(likes, comments, views),
+    velocity: velocity(views, v.snippet.publishedAt),
+    videoUrl: `https://www.youtube.com/watch?v=${v.id}`,
+    channelUrl: `https://www.youtube.com/channel/${v.snippet.channelId}`,
+  };
+}
+
+/**
+ * mostPopular 차트를 페이징하며 숏츠를 제외한 롱폼만 max개까지 수집.
+ * (숏츠를 건너뛰므로 max를 채우려면 더 많은 페이지를 조회할 수 있음)
+ */
 async function collectPopular(
   regionCode: string,
   categoryId: string | undefined,
@@ -123,9 +162,10 @@ async function collectPopular(
 ): Promise<VideoItem[]> {
   const items: VideoItem[] = [];
   let pageToken: string | undefined;
+  let pages = 0;
+  const MAX_PAGES = 5; // mostPopular는 최대 ~200개 → 안전 상한
 
-  while (items.length < max) {
-    const remaining = max - items.length;
+  while (items.length < max && pages < MAX_PAGES) {
     const data = await ytFetch<VideoListResponse>(
       "videos",
       {
@@ -133,35 +173,17 @@ async function collectPopular(
         chart: "mostPopular",
         regionCode,
         videoCategoryId: categoryId,
-        maxResults: Math.min(50, remaining),
+        maxResults: 50,
         pageToken,
       },
       apiKey
     );
+    pages++;
 
     for (const v of data.items) {
-      const views = Number(v.statistics.viewCount || 0);
-      const likes = Number(v.statistics.likeCount || 0);
-      const comments = Number(v.statistics.commentCount || 0);
-      items.push({
-        id: v.id,
-        title: v.snippet.title,
-        description: v.snippet.description,
-        channelId: v.snippet.channelId,
-        channelTitle: v.snippet.channelTitle,
-        categoryId: v.snippet.categoryId,
-        publishedAt: v.snippet.publishedAt,
-        thumbnail: pickThumb(v.snippet.thumbnails),
-        tags: v.snippet.tags || [],
-        views,
-        likes,
-        comments,
-        durationSec: parseISODuration(v.contentDetails?.duration),
-        engagementRate: engagementRate(likes, comments, views),
-        velocity: velocity(views, v.snippet.publishedAt),
-        videoUrl: `https://www.youtube.com/watch?v=${v.id}`,
-        channelUrl: `https://www.youtube.com/channel/${v.snippet.channelId}`,
-      });
+      const item = mapVideo(v);
+      if (isShorts(item.durationSec)) continue; // 숏츠 제외
+      items.push(item);
     }
 
     if (!data.nextPageToken || data.items.length === 0) break;
@@ -209,6 +231,90 @@ export async function fetchTrending(
       }
       throw e;
     }
+  });
+}
+
+/* ----------------------- Curated: IT · 우주/천문 ----------------------- */
+
+interface SearchResponse {
+  items: { id: { videoId?: string } }[];
+}
+
+/**
+ * 주제별 큐레이션 카테고리. 급상승 차트에는 이 주제가 거의 없어,
+ * search.list로 키워드 기반 수집한 뒤 videos.list로 통계를 채우고 숏츠를 제외한다.
+ *
+ * 비용: search.list = 100유닛 + videos.list = 1유닛 (사용자 키 기준, 10분 캐시).
+ * 검색어(query)는 아래 상수만 바꾸면 손쉽게 튜닝 가능.
+ * order는 viewCount가 빈 결과를 자주 반환해 relevance(기본값)를 사용한다.
+ */
+export const CURATED_TOPICS = {
+  it: {
+    label: "IT",
+    query: "IT 인공지능 반도체 기술 리뷰 개발",
+  },
+  space: {
+    label: "우주/천문",
+    query: "우주 천문학 천체 망원경 NASA 블랙홀 우주탐사",
+  },
+} as const;
+
+export type CuratedTopic = keyof typeof CURATED_TOPICS;
+
+export function isCuratedTopic(v: string): v is CuratedTopic {
+  return v in CURATED_TOPICS;
+}
+
+export async function fetchCurated(
+  regionCode: string,
+  topic: CuratedTopic,
+  max: number,
+  apiKey: string
+): Promise<TrendingResult> {
+  const key = `curated:${topic}:${regionCode}:${max}`;
+  return withCache(key, 10 * 60 * 1000, async () => {
+    // 최근 90일 내 영상으로 한정해 "소식" 성격 유지
+    const publishedAfter = new Date(
+      Date.now() - 90 * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    const search = await ytFetch<SearchResponse>(
+      "search",
+      {
+        part: "snippet",
+        type: "video",
+        q: CURATED_TOPICS[topic].query,
+        regionCode,
+        relevanceLanguage: "ko",
+        publishedAfter,
+        maxResults: 50,
+      },
+      apiKey
+    );
+
+    const ids = search.items
+      .map((i) => i.id.videoId)
+      .filter((v): v is string => Boolean(v));
+    if (ids.length === 0) return { videos: [], fallback: false };
+
+    // 검색 결과 ID로 통계/길이 보강
+    const detail = await ytFetch<VideoListResponse>(
+      "videos",
+      {
+        part: "snippet,statistics,contentDetails",
+        id: ids.join(","),
+        maxResults: 50,
+      },
+      apiKey
+    );
+
+    const videos = detail.items
+      .map(mapVideo)
+      .filter((v) => !isShorts(v.durationSec)) // 숏츠 제외
+      .sort((a, b) => b.views - a.views)
+      .slice(0, max);
+
+    return { videos, fallback: false };
   });
 }
 

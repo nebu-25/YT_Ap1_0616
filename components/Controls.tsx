@@ -13,12 +13,14 @@ export interface ControlsState {
   view: "grid" | "list";
 }
 
+export type Preset = "top100" | "it" | "space" | "custom";
+
 interface Props {
   state: ControlsState;
   categories: Category[];
-  preset: "top100" | "edu30" | "custom";
+  preset: Preset;
   resultCount: number;
-  onPreset: (p: "top100" | "edu30") => void;
+  onPreset: (p: "top100" | "it" | "space") => void;
   onChange: (patch: Partial<ControlsState>) => void;
   onExport: () => void;
   onRefresh: () => void;
@@ -35,7 +37,6 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 const LENGTH_OPTIONS: { value: LengthBucket; label: string }[] = [
   { value: "all", label: "전체 길이" },
-  { value: "short", label: "쇼츠 (<1분)" },
   { value: "mid", label: "중간 (1~20분)" },
   { value: "long", label: "롱폼 (>20분)" },
 ];
@@ -60,10 +61,16 @@ export default function Controls({
           🔥 급상승 TOP 100
         </button>
         <button
-          className={`btn ${preset === "edu30" ? "active" : ""}`}
-          onClick={() => onPreset("edu30")}
+          className={`btn ${preset === "it" ? "active" : ""}`}
+          onClick={() => onPreset("it")}
         >
-          🎓 교육 TOP 30
+          💻 IT 30
+        </button>
+        <button
+          className={`btn ${preset === "space" ? "active" : ""}`}
+          onClick={() => onPreset("space")}
+        >
+          🔭 우주/천문 30
         </button>
       </div>
 
@@ -85,6 +92,12 @@ export default function Controls({
         <label>카테고리</label>
         <select
           value={state.categoryId}
+          disabled={preset === "it" || preset === "space"}
+          title={
+            preset === "it" || preset === "space"
+              ? "IT·우주/천문 프리셋에서는 카테고리 필터가 적용되지 않습니다"
+              : undefined
+          }
           onChange={(e) => onChange({ categoryId: e.target.value })}
         >
           <option value="">전체</option>

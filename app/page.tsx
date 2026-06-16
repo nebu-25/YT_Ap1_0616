@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import Controls, { type ControlsState } from "@/components/Controls";
+import Controls, {
+  type ControlsState,
+  type Preset,
+} from "@/components/Controls";
 import VideoList from "@/components/VideoList";
 import CommentDrawer from "@/components/CommentDrawer";
 import Analytics from "@/components/Analytics";
@@ -10,8 +13,9 @@ import ApiKeyBar from "@/components/ApiKeyBar";
 import { downloadCsv, videosToCsv } from "@/lib/csv";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
-import { EDUCATION_CATEGORY_ID } from "@/lib/regions";
 import type { Category, VideoItem } from "@/lib/types";
+
+type Topic = "it" | "space";
 
 const DEFAULT_STATE: ControlsState = {
   regionCode: "KR",
@@ -27,6 +31,8 @@ export default function Home() {
   const { apiKey, setApiKey, loaded } = useApiKey();
   const [state, setState] = useState<ControlsState>(DEFAULT_STATE);
   const [max, setMax] = useState(100);
+  // topic이 null이면 일반 급상승(trending), 값이 있으면 큐레이션 모드
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [tab, setTab] = useState<"list" | "analytics">("list");
   const [active, setActive] = useState<VideoItem | null>(null);
 
@@ -39,26 +45,27 @@ export default function Home() {
   );
   const categories = catData?.categories ?? [];
 
-  // 급상승 영상 — 키가 있을 때만 요청
-  const trendingUrl = `/api/trending?regionCode=${state.regionCode}&categoryId=${state.categoryId}&max=${max}`;
+  // 데이터 소스: 큐레이션 토픽이면 /api/curated, 아니면 /api/trending
+  const dataUrl = topic
+    ? `/api/curated?regionCode=${state.regionCode}&topic=${topic}&max=${max}`
+    : `/api/trending?regionCode=${state.regionCode}&categoryId=${state.categoryId}&max=${max}`;
   const {
     data: trendData,
     error,
     isLoading,
     mutate,
   } = useSWR<{ videos: VideoItem[]; fallback?: boolean }>(
-    apiKey ? [trendingUrl, apiKey] : null,
+    apiKey ? [dataUrl, apiKey] : null,
     keyedFetcher
   );
   const rawVideos = trendData?.videos ?? [];
 
   // 프리셋 판별
-  const preset: "top100" | "edu30" | "custom" =
-    state.categoryId === "" && max === 100
+  const preset: Preset = topic
+    ? topic
+    : state.categoryId === "" && max === 100
       ? "top100"
-      : state.categoryId === EDUCATION_CATEGORY_ID && max === 30
-        ? "edu30"
-        : "custom";
+      : "custom";
 
   // 클라이언트 정렬·필터
   const videos = useMemo(
@@ -66,18 +73,24 @@ export default function Home() {
     [rawVideos, state]
   );
 
-  const onPreset = (p: "top100" | "edu30") => {
+  const onPreset = (p: "top100" | "it" | "space") => {
     if (p === "top100") {
+      setTopic(null);
       setMax(100);
       setState((s) => ({ ...s, categoryId: "" }));
     } else {
+      setTopic(p);
       setMax(30);
-      setState((s) => ({ ...s, categoryId: EDUCATION_CATEGORY_ID }));
     }
   };
 
-  const onChange = (patch: Partial<ControlsState>) =>
+  const onChange = (patch: Partial<ControlsState>) => {
+    // 카테고리를 직접 바꾸면 큐레이션 모드에서 일반 급상승 모드로 전환
+    if (patch.categoryId !== undefined && topic) {
+      setTopic(null);
+    }
     setState((s) => ({ ...s, ...patch }));
+  };
 
   const onExport = () => {
     const region = state.regionCode;
@@ -198,9 +211,7 @@ function applyFilters(videos: VideoItem[], s: ControlsState): VideoItem[] {
   const q = s.search.trim().toLowerCase();
   let out = videos.filter((v) => {
     if (v.views < s.minViews) return false;
-    if (s.length === "short" && v.durationSec >= 60) return false;
-    if (s.length === "mid" && (v.durationSec < 60 || v.durationSec > 1200))
-      return false;
+    if (s.length === "mid" && v.durationSec > 1200) return false;
     if (s.length === "long" && v.durationSec <= 1200) return false;
     if (
       q &&

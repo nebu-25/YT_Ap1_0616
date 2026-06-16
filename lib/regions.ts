@@ -16,6 +16,3 @@ export const REGIONS: { code: string; label: string }[] = [
   { code: "MX", label: "🇲🇽 멕시코" },
   { code: "RU", label: "🇷🇺 러시아" },
 ];
-
-/** 교육 카테고리 ID (YouTube 표준) */
-export const EDUCATION_CATEGORY_ID = "27";

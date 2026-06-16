@@ -54,4 +54,4 @@ export type SortKey =
   | "velocity"
   | "newest";
 
-export type LengthBucket = "all" | "short" | "mid" | "long";
+export type LengthBucket = "all" | "mid" | "long";

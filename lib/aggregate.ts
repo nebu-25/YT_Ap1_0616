@@ -64,12 +64,11 @@ export function categoryDistribution(
   return toSortedTop(map, 50);
 }
 
-/** 길이 버킷 분포: 쇼츠(<60s) / 중간(1~20분) / 롱폼(>20분) */
+/** 길이 버킷 분포 (숏츠는 수집 단계에서 제외됨): 중간(1~20분) / 롱폼(>20분) */
 export function lengthDistribution(videos: VideoItem[]): CountDatum[] {
-  const buckets = { "쇼츠 (<1분)": 0, "중간 (1~20분)": 0, "롱폼 (>20분)": 0 };
+  const buckets = { "중간 (1~20분)": 0, "롱폼 (>20분)": 0 };
   for (const v of videos) {
-    if (v.durationSec < 60) buckets["쇼츠 (<1분)"]++;
-    else if (v.durationSec <= 20 * 60) buckets["중간 (1~20분)"]++;
+    if (v.durationSec <= 20 * 60) buckets["중간 (1~20분)"]++;
     else buckets["롱폼 (>20분)"]++;
   }
   return Object.entries(buckets).map(([name, count]) => ({ name, count }));
