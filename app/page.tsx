@@ -100,6 +100,7 @@ export default function Home() {
     data: trendData,
     error,
     isLoading,
+    isValidating,
     mutate,
   } = useSWR<{ videos: VideoItem[]; fallback?: boolean }>(
     apiKey ? [dataUrl, apiKey] : null,
@@ -144,6 +145,10 @@ export default function Home() {
     const date = new Date().toISOString().slice(0, 10);
     downloadCsv(`youtube-trending-${region}-${date}.csv`, videosToCsv(videos));
   };
+
+  // 검색·최소조회수·길이 등 결과를 줄이는 필터만 초기화
+  const onResetFilters = () =>
+    setState((s) => ({ ...s, search: "", minViews: 0, length: "all" }));
 
   return (
     <main className="container">
@@ -196,6 +201,7 @@ export default function Home() {
               categories={categories}
               preset={preset}
               resultCount={videos.length}
+              refreshing={isValidating}
               onChange={onChange}
               onExport={onExport}
               onRefresh={() => mutate()}
@@ -261,11 +267,24 @@ export default function Home() {
               {isLoading ? (
                 <Skeletons view={state.view} />
               ) : tab === "list" ? (
-                <VideoList
-                  videos={videos}
-                  view={state.view}
-                  onOpenComments={setActive}
-                />
+                videos.length === 0 && rawVideos.length > 0 ? (
+                  <div className="banner info">
+                    적용한 필터(검색·최소 조회수·길이)에 맞는 영상이 없습니다.{" "}
+                    <button
+                      className="btn ghost"
+                      onClick={onResetFilters}
+                      style={{ marginLeft: 8 }}
+                    >
+                      필터 초기화
+                    </button>
+                  </div>
+                ) : (
+                  <VideoList
+                    videos={videos}
+                    view={state.view}
+                    onOpenComments={setActive}
+                  />
+                )
               ) : (
                 <Analytics videos={videos} categories={categories} />
               )}

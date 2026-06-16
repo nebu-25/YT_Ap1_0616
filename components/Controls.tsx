@@ -20,6 +20,7 @@ interface Props {
   categories: Category[];
   preset: Preset;
   resultCount: number;
+  refreshing?: boolean;
   onChange: (patch: Partial<ControlsState>) => void;
   onExport: () => void;
   onRefresh: () => void;
@@ -45,15 +46,18 @@ export default function Controls({
   categories,
   preset,
   resultCount,
+  refreshing,
   onChange,
   onExport,
   onRefresh,
 }: Props) {
+  const curated = preset === "it" || preset === "space";
   return (
     <div className="controls">
       <div className="field">
-        <label>국가</label>
+        <label htmlFor="ctl-region">국가</label>
         <select
+          id="ctl-region"
           value={state.regionCode}
           onChange={(e) => onChange({ regionCode: e.target.value })}
         >
@@ -66,12 +70,13 @@ export default function Controls({
       </div>
 
       <div className="field">
-        <label>카테고리</label>
+        <label htmlFor="ctl-category">카테고리</label>
         <select
+          id="ctl-category"
           value={state.categoryId}
-          disabled={preset === "it" || preset === "space"}
+          disabled={curated}
           title={
-            preset === "it" || preset === "space"
+            curated
               ? "IT·우주/천문 프리셋에서는 카테고리 필터가 적용되지 않습니다"
               : undefined
           }
@@ -87,8 +92,9 @@ export default function Controls({
       </div>
 
       <div className="field">
-        <label>정렬</label>
+        <label htmlFor="ctl-sort">정렬</label>
         <select
+          id="ctl-sort"
           value={state.sort}
           onChange={(e) => onChange({ sort: e.target.value as SortKey })}
         >
@@ -101,8 +107,9 @@ export default function Controls({
       </div>
 
       <div className="field">
-        <label>길이</label>
+        <label htmlFor="ctl-length">길이</label>
         <select
+          id="ctl-length"
           value={state.length}
           onChange={(e) =>
             onChange({ length: e.target.value as LengthBucket })
@@ -117,8 +124,9 @@ export default function Controls({
       </div>
 
       <div className="field">
-        <label>최소 조회수</label>
+        <label htmlFor="ctl-minviews">최소 조회수</label>
         <input
+          id="ctl-minviews"
           type="number"
           min={0}
           step={10000}
@@ -130,8 +138,9 @@ export default function Controls({
       </div>
 
       <div className="field" style={{ flex: 1, minWidth: 160 }}>
-        <label>검색 (제목·채널)</label>
+        <label htmlFor="ctl-search">검색 (제목·채널)</label>
         <input
+          id="ctl-search"
           type="text"
           value={state.search}
           placeholder="키워드 입력"
@@ -139,11 +148,13 @@ export default function Controls({
         />
       </div>
 
-      <div className="view-group">
+      <div className="view-group" role="group" aria-label="보기 형태">
         <button
           className={`btn ${state.view === "grid" ? "active" : ""}`}
           onClick={() => onChange({ view: "grid" })}
           title="그리드 보기"
+          aria-label="그리드 보기"
+          aria-pressed={state.view === "grid"}
         >
           ▦
         </button>
@@ -151,13 +162,21 @@ export default function Controls({
           className={`btn ${state.view === "list" ? "active" : ""}`}
           onClick={() => onChange({ view: "list" })}
           title="리스트 보기"
+          aria-label="리스트 보기"
+          aria-pressed={state.view === "list"}
         >
           ☰
         </button>
       </div>
 
-      <button className="btn ghost" onClick={onRefresh} title="새로고침">
-        ↻
+      <button
+        className="btn ghost"
+        onClick={onRefresh}
+        disabled={refreshing}
+        title="새로고침"
+        aria-label={refreshing ? "새로고침 중" : "새로고침"}
+      >
+        <span className={refreshing ? "spin" : undefined}>↻</span>
       </button>
 
       <button

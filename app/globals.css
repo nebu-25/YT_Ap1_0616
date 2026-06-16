@@ -235,7 +235,20 @@ input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
-  margin: 16px 0;
+  /* 위쪽 마진 제거: content 첫 요소인 컨트롤 바의 상단을 사이드바 상단과 정렬 */
+  margin: 0 0 16px;
+}
+
+/* 새로고침 버튼 스피너 */
+.spin {
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .field {
