@@ -1,8 +1,18 @@
-import { withCache } from "./cache";
+import { getCached, setCached } from "./cache";
 import { engagementRate, parseISODuration, velocity } from "./metrics";
 import type { Category, CommentItem, VideoItem } from "./types";
 
 const API_BASE = "https://www.googleapis.com/youtube/v3";
+
+/** 실제 소비된 YouTube 할당량(유닛)을 누적하는 출력 파라미터 */
+export interface QuotaCost {
+  units: number;
+}
+
+/** 엔드포인트별 유닛 비용 (search만 100, 나머지 1) */
+function unitCost(path: string): number {
+  return path === "search" ? 100 : 1;
+}
 
 /** YouTube API 호출 시 발생하는 정규화된 에러. reason으로 클라이언트 메시지 분기. */
 export class YouTubeError extends Error {
@@ -27,13 +37,17 @@ interface YTErrorBody {
 async function ytFetch<T>(
   path: string,
   params: Record<string, string | number | undefined>,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<T> {
   const url = new URL(`${API_BASE}/${path}`);
   url.searchParams.set("key", apiKey);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
   }
+
+  // 호출 시점에 할당량이 소비되므로 요청 직전에 카운트
+  if (cost) cost.units += unitCost(path);
 
   const res = await fetch(url.toString());
   if (!res.ok) {
@@ -61,20 +75,25 @@ interface CategoryListResponse {
 
 export async function fetchCategories(
   regionCode: string,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<Category[]> {
   const key = `categories:${regionCode}`;
+  const hit = getCached<Category[]>(key);
+  if (hit !== undefined) return hit; // 캐시 적중 → 할당량 0
+
+  const data = await ytFetch<CategoryListResponse>(
+    "videoCategories",
+    { part: "snippet", regionCode },
+    apiKey,
+    cost
+  );
+  const result = data.items
+    .filter((i) => i.snippet.assignable)
+    .map((i) => ({ id: i.id, title: i.snippet.title }));
   // 카테고리는 거의 변하지 않으므로 24시간 캐시
-  return withCache(key, 24 * 60 * 60 * 1000, async () => {
-    const data = await ytFetch<CategoryListResponse>(
-      "videoCategories",
-      { part: "snippet", regionCode },
-      apiKey
-    );
-    return data.items
-      .filter((i) => i.snippet.assignable)
-      .map((i) => ({ id: i.id, title: i.snippet.title }));
-  });
+  setCached(key, result, 24 * 60 * 60 * 1000);
+  return result;
 }
 
 /* ------------------------------ Trending ------------------------------ */
@@ -158,7 +177,8 @@ async function collectPopular(
   regionCode: string,
   categoryId: string | undefined,
   max: number,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<VideoItem[]> {
   const items: VideoItem[] = [];
   let pageToken: string | undefined;
@@ -176,7 +196,8 @@ async function collectPopular(
         maxResults: 50,
         pageToken,
       },
-      apiKey
+      apiKey,
+      cost
     );
     pages++;
 
@@ -206,32 +227,38 @@ export async function fetchTrending(
   regionCode: string,
   categoryId: string | undefined,
   max: number,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<TrendingResult> {
   const key = `trending:${regionCode}:${categoryId || "all"}:${max}`;
-  return withCache(key, 10 * 60 * 1000, async () => {
+  const hit = getCached<TrendingResult>(key);
+  if (hit !== undefined) return hit; // 캐시 적중 → 할당량 0
+
+  const result = await (async (): Promise<TrendingResult> => {
     if (!categoryId) {
       return {
-        videos: await collectPopular(regionCode, undefined, max, apiKey),
+        videos: await collectPopular(regionCode, undefined, max, apiKey, cost),
         fallback: false,
       };
     }
-
     try {
       // 1차: 카테고리 필터 차트 직접 요청 (지역이 지원하면 가장 정확)
-      const videos = await collectPopular(regionCode, categoryId, max, apiKey);
+      const videos = await collectPopular(regionCode, categoryId, max, apiKey, cost);
       return { videos, fallback: false };
     } catch (e) {
       // 일부 지역은 mostPopular + videoCategoryId 조합 미지원 → 404 notFound.
       // 이 경우 전체 급상승 차트를 넓게 가져와 해당 카테고리만 필터링.
       if (e instanceof YouTubeError && (e.reason === "notFound" || e.status === 404)) {
-        const all = await collectPopular(regionCode, undefined, FALLBACK_SCAN, apiKey);
+        const all = await collectPopular(regionCode, undefined, FALLBACK_SCAN, apiKey, cost);
         const videos = all.filter((v) => v.categoryId === categoryId).slice(0, max);
         return { videos, fallback: true };
       }
       throw e;
     }
-  });
+  })();
+
+  setCached(key, result, 10 * 60 * 1000);
+  return result;
 }
 
 /* ----------------------- Curated: IT · 우주/천문 ----------------------- */
@@ -313,57 +340,67 @@ export async function fetchCurated(
   regionCode: string,
   topic: CuratedTopic,
   max: number,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<TrendingResult> {
   const key = `curated:${topic}:${regionCode}:${max}`;
-  return withCache(key, 10 * 60 * 1000, async () => {
-    // 최근 90일 내 영상으로 한정해 "소식" 성격 유지
-    const publishedAfter = new Date(
-      Date.now() - 90 * 24 * 60 * 60 * 1000
-    ).toISOString();
+  const hit = getCached<TrendingResult>(key);
+  if (hit !== undefined) return hit; // 캐시 적중 → 할당량 0
 
-    const lang = LANG_BY_REGION[regionCode] || "en";
-    const queries = CURATED_TOPICS[topic].queries;
-    const q = queries[lang] || queries.en;
+  // 최근 90일 내 영상으로 한정해 "소식" 성격 유지
+  const publishedAfter = new Date(
+    Date.now() - 90 * 24 * 60 * 60 * 1000
+  ).toISOString();
 
-    const search = await ytFetch<SearchResponse>(
-      "search",
-      {
-        part: "snippet",
-        type: "video",
-        q,
-        regionCode,
-        relevanceLanguage: lang,
-        publishedAfter,
-        maxResults: 50,
-      },
-      apiKey
-    );
+  const lang = LANG_BY_REGION[regionCode] || "en";
+  const queries = CURATED_TOPICS[topic].queries;
+  const q = queries[lang] || queries.en;
 
-    const ids = search.items
-      .map((i) => i.id.videoId)
-      .filter((v): v is string => Boolean(v));
-    if (ids.length === 0) return { videos: [], fallback: false };
+  const search = await ytFetch<SearchResponse>(
+    "search",
+    {
+      part: "snippet",
+      type: "video",
+      q,
+      regionCode,
+      relevanceLanguage: lang,
+      publishedAfter,
+      maxResults: 50,
+    },
+    apiKey,
+    cost
+  );
 
-    // 검색 결과 ID로 통계/길이 보강
-    const detail = await ytFetch<VideoListResponse>(
-      "videos",
-      {
-        part: "snippet,statistics,contentDetails",
-        id: ids.join(","),
-        maxResults: 50,
-      },
-      apiKey
-    );
+  const ids = search.items
+    .map((i) => i.id.videoId)
+    .filter((v): v is string => Boolean(v));
+  if (ids.length === 0) {
+    const empty = { videos: [], fallback: false };
+    setCached(key, empty, 10 * 60 * 1000);
+    return empty;
+  }
 
-    const videos = detail.items
-      .map(mapVideo)
-      .filter((v) => !isShorts(v.durationSec)) // 숏츠 제외
-      .sort((a, b) => b.views - a.views)
-      .slice(0, max);
+  // 검색 결과 ID로 통계/길이 보강
+  const detail = await ytFetch<VideoListResponse>(
+    "videos",
+    {
+      part: "snippet,statistics,contentDetails",
+      id: ids.join(","),
+      maxResults: 50,
+    },
+    apiKey,
+    cost
+  );
 
-    return { videos, fallback: false };
-  });
+  const videos = detail.items
+    .map(mapVideo)
+    .filter((v) => !isShorts(v.durationSec)) // 숏츠 제외
+    .sort((a, b) => b.views - a.views)
+    .slice(0, max);
+
+  const result = { videos, fallback: false };
+  setCached(key, result, 10 * 60 * 1000);
+  return result;
 }
 
 /* ------------------------------ Comments ------------------------------ */
@@ -390,7 +427,8 @@ export async function fetchComments(
   videoId: string,
   order: "relevance" | "time",
   max: number,
-  apiKey: string
+  apiKey: string,
+  cost?: QuotaCost
 ): Promise<{ disabled: boolean; items: CommentItem[] }> {
   try {
     const data = await ytFetch<CommentThreadResponse>(
@@ -402,7 +440,8 @@ export async function fetchComments(
         maxResults: Math.min(100, max),
         textFormat: "plainText",
       },
-      apiKey
+      apiKey,
+      cost
     );
     const items: CommentItem[] = data.items.map((t) => {
       const c = t.snippet.topLevelComment.snippet;

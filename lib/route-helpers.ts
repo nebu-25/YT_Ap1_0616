@@ -6,6 +6,8 @@ export function getRequestApiKey(req: NextRequest): string {
   return req.headers.get("x-youtube-api-key")?.trim() || "";
 }
 
+const NO_STORE = { "Cache-Control": "no-store" };
+
 /** 키 누락 시 401 응답 (라우트에서 공통 사용) */
 export function missingKeyResponse(): NextResponse {
   return NextResponse.json(
@@ -13,8 +15,24 @@ export function missingKeyResponse(): NextResponse {
       error: "YouTube API 키가 필요합니다. 우측 상단에서 키를 입력하세요.",
       reason: "missingKey",
     },
-    { status: 401 }
+    { status: 401, headers: NO_STORE }
   );
+}
+
+/**
+ * 성공 데이터 응답. Vercel CDN이 응답을 공유 캐싱하도록 s-maxage를 부여해
+ * 사용자 간 할당량을 절약한다. cost(이번 호출이 실제 소비한 유닛)는 헤더로 전달.
+ */
+export function dataResponse(
+  data: unknown,
+  opts: { cost: number; sMaxAge: number; swr: number }
+): NextResponse {
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": `public, s-maxage=${opts.sMaxAge}, stale-while-revalidate=${opts.swr}`,
+      "X-Yt-Quota-Cost": String(opts.cost),
+    },
+  });
 }
 
 /** YouTubeError를 reason별 사용자 메시지 + 적절한 상태코드로 변환 */
@@ -42,10 +60,13 @@ export function errorResponse(e: unknown): NextResponse {
       : messages[e.reason] || e.message;
     const reason = isKeyInvalid ? "keyInvalid" : e.reason;
     const status = e.reason === "missingKey" ? 500 : e.status || 400;
-    return NextResponse.json({ error: message, reason }, { status });
+    return NextResponse.json(
+      { error: message, reason },
+      { status, headers: NO_STORE }
+    );
   }
   return NextResponse.json(
     { error: "예기치 못한 오류가 발생했습니다.", reason: "unknown" },
-    { status: 500 }
+    { status: 500, headers: NO_STORE }
   );
 }

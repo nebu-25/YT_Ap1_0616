@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import Controls, {
   type ControlsState,
@@ -11,10 +11,11 @@ import CommentDrawer from "@/components/CommentDrawer";
 import Analytics from "@/components/Analytics";
 import ApiKeyBar from "@/components/ApiKeyBar";
 import Sidebar from "@/components/Sidebar";
+import QuotaBadge from "@/components/QuotaBadge";
 import { downloadCsv, videosToCsv } from "@/lib/csv";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
-import type { Category, VideoItem } from "@/lib/types";
+import type { Category, SortKey, LengthBucket, VideoItem } from "@/lib/types";
 
 type Topic = "it" | "space";
 
@@ -36,6 +37,50 @@ export default function Home() {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [tab, setTab] = useState<"list" | "analytics">("list");
   const [active, setActive] = useState<VideoItem | null>(null);
+
+  // --- URL 쿼리 동기화 (공유 가능 + 새로고침 유지) ---
+  const hydrated = useRef(false);
+
+  // 마운트 시 URL에서 상태 복원
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get("topic");
+    if (t === "it" || t === "space") {
+      setTopic(t);
+      setMax(30);
+    }
+    setState((s) => ({
+      ...s,
+      regionCode: p.get("r") || s.regionCode,
+      categoryId: t ? "" : p.get("cat") || s.categoryId,
+      sort: (p.get("sort") as SortKey) || s.sort,
+      length: (p.get("len") as LengthBucket) || s.length,
+      search: p.get("q") || s.search,
+      minViews: Number(p.get("minv")) || s.minViews,
+      view: p.get("view") === "list" ? "list" : s.view,
+    }));
+    hydrated.current = true;
+  }, []);
+
+  // 상태 변경 시 URL 갱신 (히스토리 오염 없이 replace)
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const p = new URLSearchParams();
+    p.set("r", state.regionCode);
+    if (topic) p.set("topic", topic);
+    else if (state.categoryId) p.set("cat", state.categoryId);
+    if (state.sort !== "views") p.set("sort", state.sort);
+    if (state.length !== "all") p.set("len", state.length);
+    if (state.search) p.set("q", state.search);
+    if (state.minViews) p.set("minv", String(state.minViews));
+    if (state.view !== "grid") p.set("view", state.view);
+    const qs = p.toString();
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `?${qs}` : window.location.pathname
+    );
+  }, [state, topic]);
 
   // 카테고리 (지역별) — 키가 있을 때만 요청
   const { data: catData } = useSWR<{ categories: Category[] }>(
@@ -108,8 +153,17 @@ export default function Home() {
             지역·카테고리별 급상승 영상을 지표·집계로 분석
           </span>
         </div>
-        <div style={{ marginLeft: "auto" }}>
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 6,
+          }}
+        >
           <ApiKeyBar apiKey={apiKey} onSave={setApiKey} />
+          {apiKey ? <QuotaBadge /> : null}
         </div>
       </div>
 
@@ -148,6 +202,13 @@ export default function Home() {
 
             {error && (
               <div className="banner error">⚠️ {(error as Error).message}</div>
+            )}
+
+            {isLoading && topic && (
+              <div className="banner info">
+                🔍 검색 기반 큐레이션은 최초 조회가 몇 초 걸릴 수 있어요 (약
+                100유닛 사용, 이후 10분간은 캐시).
+              </div>
             )}
 
             {!isLoading &&

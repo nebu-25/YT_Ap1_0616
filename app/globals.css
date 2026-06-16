@@ -94,6 +94,35 @@ input {
   color: var(--accent-2);
 }
 
+.apikey-tip {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 460px;
+  text-align: right;
+}
+
+.apikey-tip a {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+.apikey-tip b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.quota-badge {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: help;
+}
+
 .banner.onboard {
   line-height: 1.6;
 }
