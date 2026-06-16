@@ -98,22 +98,24 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
             </button>
           </div>
 
-          {mode === "list" && (
-            <div className="seg" aria-label="정렬">
-              <button
-                className={`btn ${order === "relevance" ? "active" : ""}`}
-                onClick={() => setOrder("relevance")}
-              >
-                관련성순
-              </button>
-              <button
-                className={`btn ${order === "time" ? "active" : ""}`}
-                onClick={() => setOrder("time")}
-              >
-                최신순
-              </button>
-            </div>
-          )}
+          {/* 정렬은 분석 모드에서도 노출 — 분석 표본(불러온 댓글)의 기준이 되기 때문 */}
+          <div
+            className="seg"
+            aria-label={mode === "analysis" ? "분석 표본 정렬" : "댓글 정렬"}
+          >
+            <button
+              className={`btn ${order === "relevance" ? "active" : ""}`}
+              onClick={() => setOrder("relevance")}
+            >
+              관련성순
+            </button>
+            <button
+              className={`btn ${order === "time" ? "active" : ""}`}
+              onClick={() => setOrder("time")}
+            >
+              최신순
+            </button>
+          </div>
         </div>
 
         <div className="drawer-body">
@@ -132,7 +134,11 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
             !isLoading && <div className="muted">댓글이 없습니다.</div>}
 
           {!isLoading && !error && items.length > 0 && mode === "analysis" && (
-            <CommentAnalysis items={items} total={video.comments} />
+            <CommentAnalysis
+              items={items}
+              total={video.comments}
+              order={order}
+            />
           )}
 
           {mode === "list" &&
@@ -164,10 +170,14 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
 function CommentAnalysis({
   items,
   total,
+  order,
 }: {
   items: CommentItem[];
   total: number;
+  order: "relevance" | "time";
 }) {
+  const orderLabel = order === "relevance" ? "관련성순" : "최신순";
+  const partial = items.length < total;
   const keywords = useMemo(() => commentKeywordFrequency(items, 16), [items]);
   const topLiked = useMemo(
     () => [...items].sort((a, b) => b.likes - a.likes).slice(0, 5),
@@ -208,6 +218,12 @@ function CommentAnalysis({
           <span className="muted">답글 있는 댓글</span>
           <b>{stats.repliedPct}%</b>
         </div>
+      </div>
+
+      <div className="cs-note">
+        ⓘ <b>{orderLabel}</b>으로 불러온 댓글 {items.length}개
+        {partial ? " 표본" : ""} 기준입니다.
+        {partial && " 정렬을 바꾸면 다른 표본으로 다시 분석합니다."}
       </div>
 
       <section>

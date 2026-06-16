@@ -614,6 +614,18 @@ input[type="number"] {
   font-variant-numeric: tabular-nums;
 }
 
+.cs-note {
+  margin-top: -8px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.cs-note b {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .comment-analysis section {
   display: flex;
   flex-direction: column;
