@@ -244,18 +244,43 @@ interface SearchResponse {
  * 주제별 큐레이션 카테고리. 급상승 차트에는 이 주제가 거의 없어,
  * search.list로 키워드 기반 수집한 뒤 videos.list로 통계를 채우고 숏츠를 제외한다.
  *
+ * 국가별로 결과가 달라지도록, 지역 언어에 맞는 검색어 + relevanceLanguage를 사용한다.
+ * 지원 언어가 없으면 영어(en)로 폴백.
+ *
  * 비용: search.list = 100유닛 + videos.list = 1유닛 (사용자 키 기준, 10분 캐시).
- * 검색어(query)는 아래 상수만 바꾸면 손쉽게 튜닝 가능.
- * order는 viewCount가 빈 결과를 자주 반환해 relevance(기본값)를 사용한다.
  */
 export const CURATED_TOPICS = {
   it: {
     label: "IT",
-    query: "IT 인공지능 반도체 기술 리뷰 개발",
+    queries: {
+      ko: "IT 인공지능 반도체 기술 리뷰 개발",
+      en: "tech AI semiconductor gadget review software",
+      ja: "IT テクノロジー AI 半導体 ガジェット レビュー",
+      de: "Technik KI Halbleiter Gadget Test Software",
+      fr: "tech IA intelligence artificielle semi-conducteur informatique",
+      es: "tecnología IA inteligencia artificial chip review software",
+      pt: "tecnologia IA inteligência artificial semicondutor review",
+      ru: "технологии ИИ искусственный интеллект процессор обзор",
+      "zh-Hant": "科技 人工智慧 半導體 評測 軟體",
+      vi: "công nghệ AI trí tuệ nhân tạo chip đánh giá",
+      id: "teknologi AI kecerdasan buatan semikonduktor ulasan",
+    } as Record<string, string>,
   },
   space: {
     label: "우주/천문",
-    query: "우주 천문학 천체 망원경 NASA 블랙홀 우주탐사",
+    queries: {
+      ko: "우주 천문학 천체 망원경 NASA 블랙홀 우주탐사",
+      en: "space astronomy universe telescope NASA black hole cosmos",
+      ja: "宇宙 天文学 望遠鏡 NASA ブラックホール 銀河",
+      de: "Weltraum Astronomie Universum Teleskop NASA schwarzes Loch",
+      fr: "espace astronomie univers télescope NASA trou noir",
+      es: "espacio astronomía universo telescopio NASA agujero negro",
+      pt: "espaço astronomia universo telescópio NASA buraco negro",
+      ru: "космос астрономия вселенная телескоп NASA чёрная дыра",
+      "zh-Hant": "太空 天文學 宇宙 望遠鏡 NASA 黑洞",
+      vi: "vũ trụ thiên văn học kính viễn vọng NASA hố đen",
+      id: "luar angkasa astronomi alam semesta teleskop NASA lubang hitam",
+    } as Record<string, string>,
   },
 } as const;
 
@@ -264,6 +289,25 @@ export type CuratedTopic = keyof typeof CURATED_TOPICS;
 export function isCuratedTopic(v: string): v is CuratedTopic {
   return v in CURATED_TOPICS;
 }
+
+/** 지역(regionCode) → 검색 언어(relevanceLanguage) 매핑. 미지정 지역은 영어. */
+const LANG_BY_REGION: Record<string, string> = {
+  KR: "ko",
+  JP: "ja",
+  DE: "de",
+  FR: "fr",
+  BR: "pt",
+  MX: "es",
+  RU: "ru",
+  TW: "zh-Hant",
+  VN: "vi",
+  ID: "id",
+  US: "en",
+  GB: "en",
+  CA: "en",
+  AU: "en",
+  IN: "en",
+};
 
 export async function fetchCurated(
   regionCode: string,
@@ -278,14 +322,18 @@ export async function fetchCurated(
       Date.now() - 90 * 24 * 60 * 60 * 1000
     ).toISOString();
 
+    const lang = LANG_BY_REGION[regionCode] || "en";
+    const queries = CURATED_TOPICS[topic].queries;
+    const q = queries[lang] || queries.en;
+
     const search = await ytFetch<SearchResponse>(
       "search",
       {
         part: "snippet",
         type: "video",
-        q: CURATED_TOPICS[topic].query,
+        q,
         regionCode,
-        relevanceLanguage: "ko",
+        relevanceLanguage: lang,
         publishedAfter,
         maxResults: 50,
       },
