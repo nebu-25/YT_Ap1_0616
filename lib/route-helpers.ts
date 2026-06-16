@@ -22,6 +22,11 @@ export function missingKeyResponse(): NextResponse {
 /**
  * 성공 데이터 응답. Vercel CDN이 응답을 공유 캐싱하도록 s-maxage를 부여해
  * 사용자 간 할당량을 절약한다. cost(이번 호출이 실제 소비한 유닛)는 헤더로 전달.
+ *
+ * 주의: public 캐싱은 URL 기준으로만 동작하므로, 캐시 적중 시에는 키 검증 없이
+ * 결과가 서빙될 수 있다(의도된 트레이드오프). 캐싱 대상은 공개 트렌드/영상/댓글
+ * 데이터뿐이며 응답 본문에 API 키·개인정보는 포함하지 않는다. 자세한 내용은
+ * README의 "캐싱 동작과 한계" 참고.
  */
 export function dataResponse(
   data: unknown,

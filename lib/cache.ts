@@ -23,16 +23,3 @@ export function getCached<T>(key: string): T | undefined {
 export function setCached<T>(key: string, value: T, ttlMs: number): void {
   store.set(key, { value, expires: Date.now() + ttlMs });
 }
-
-/** 캐시 우선 조회 후 없으면 loader 실행 → 결과 캐시. */
-export async function withCache<T>(
-  key: string,
-  ttlMs: number,
-  loader: () => Promise<T>
-): Promise<T> {
-  const hit = getCached<T>(key);
-  if (hit !== undefined) return hit;
-  const value = await loader();
-  setCached(key, value, ttlMs);
-  return value;
-}
