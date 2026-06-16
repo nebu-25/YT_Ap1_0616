@@ -21,7 +21,7 @@ const ITEMS: {
 export default function Sidebar({ preset, onPreset }: Props) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-title">트렌딩</div>
+      <div className="sidebar-title">프리셋</div>
       <nav className="sidebar-nav">
         {ITEMS.map((it) => (
           <button

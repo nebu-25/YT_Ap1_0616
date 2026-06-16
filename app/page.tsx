@@ -39,6 +39,15 @@ export default function Home() {
   const [tab, setTab] = useState<"list" | "analytics">("list");
   const [active, setActive] = useState<VideoItem | null>(null);
 
+  // 가벼운 토스트 (자동 사라짐)
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
   // --- URL 쿼리 동기화 (공유 가능 + 새로고침 유지) ---
   const hydrated = useRef(false);
 
@@ -144,6 +153,7 @@ export default function Home() {
     const region = state.regionCode;
     const date = new Date().toISOString().slice(0, 10);
     downloadCsv(`youtube-trending-${region}-${date}.csv`, videosToCsv(videos));
+    showToast(`CSV ${videos.length.toLocaleString()}개 항목을 내보냈습니다.`);
   };
 
   // 검색·최소조회수·길이 등 결과를 줄이는 필터만 초기화
@@ -299,6 +309,12 @@ export default function Home() {
           apiKey={apiKey}
           onClose={() => setActive(null)}
         />
+      )}
+
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">
+          {toast}
+        </div>
       )}
     </main>
   );

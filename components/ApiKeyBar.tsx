@@ -67,19 +67,22 @@ export default function ApiKeyBar({ apiKey, onSave }: Props) {
       >
         키 발급 방법 ↗
       </a>
-      <span className="apikey-tip">
-        🔒 보안 팁: Google Cloud{" "}
-        <a
-          href="https://console.cloud.google.com/apis/credentials"
-          target="_blank"
-          rel="noreferrer"
-        >
-          사용자 인증 정보
-        </a>
-        에서 이 키를 <b>YouTube Data API v3</b>로 <b>API 제한</b>하고,{" "}
-        <b>HTTP 리퍼러</b>(이 사이트 주소)로 <b>애플리케이션 제한</b>을 걸어
-        두세요. 유출되어도 악용을 막을 수 있습니다.
-      </span>
+      <details className="apikey-tip">
+        <summary>🔒 보안 팁</summary>
+        <div className="apikey-tip-body">
+          Google Cloud{" "}
+          <a
+            href="https://console.cloud.google.com/apis/credentials"
+            target="_blank"
+            rel="noreferrer"
+          >
+            사용자 인증 정보
+          </a>
+          에서 이 키를 <b>YouTube Data API v3</b>로 <b>API 제한</b>하고,{" "}
+          <b>HTTP 리퍼러</b>(이 사이트 주소)로 <b>애플리케이션 제한</b>을 걸어
+          두세요. 유출되어도 악용을 막을 수 있습니다.
+        </div>
+      </details>
     </div>
   );
 }

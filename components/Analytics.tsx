@@ -52,7 +52,7 @@ export default function Analytics({ videos, categories }: Props) {
       </ChartCard>
 
       <ChartCard title="🔠 인기 키워드·태그 (TOP 20)">
-        <HBar data={keywords} color="#38d39f" />
+        <Chips data={keywords} />
       </ChartCard>
 
       <ChartCard title="🗂 카테고리 분포">
@@ -81,6 +81,29 @@ function ChartCard({
     <div className="chart-card">
       <h3>{title}</h3>
       {children}
+    </div>
+  );
+}
+
+/** 키워드·태그 칩 클라우드 (빈도가 높을수록 글자 크게·진하게) */
+function Chips({ data }: { data: CountDatum[] }) {
+  const max = data[0]?.count || 1; // data는 빈도 내림차순
+  return (
+    <div className="chips">
+      {data.map((d) => {
+        const scale = d.count / max;
+        return (
+          <span
+            className="chip"
+            key={d.name}
+            style={{ fontSize: 12 + scale * 7, opacity: 0.6 + scale * 0.4 }}
+            title={`${d.count}개 영상에서 등장`}
+          >
+            {d.name}
+            <b>{d.count}</b>
+          </span>
+        );
+      })}
     </div>
   );
 }
