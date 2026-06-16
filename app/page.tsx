@@ -13,6 +13,7 @@ import ApiKeyBar from "@/components/ApiKeyBar";
 import Sidebar from "@/components/Sidebar";
 import QuotaBadge from "@/components/QuotaBadge";
 import { downloadCsv, videosToCsv } from "@/lib/csv";
+import { velocity } from "@/lib/metrics";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
 import type { Category, SortKey, LengthBucket, VideoItem } from "@/lib/types";
@@ -272,7 +273,12 @@ export default function Home() {
 
 function applyFilters(videos: VideoItem[], s: ControlsState): VideoItem[] {
   const q = s.search.trim().toLowerCase();
-  let out = videos.filter((v) => {
+  // velocity는 시간 의존 지표라 서버 계산값이 캐시되면 과거 기준이 된다.
+  // 현재 시각 기준으로 클라이언트에서 재계산해 정렬·표시·CSV에 반영한다.
+  // (engagementRate는 시간 무관이므로 서버 값을 그대로 사용)
+  let out = videos
+    .map((v) => ({ ...v, velocity: velocity(v.views, v.publishedAt) }))
+    .filter((v) => {
     if (v.views < s.minViews) return false;
     if (s.length === "mid" && v.durationSec > 1200) return false;
     if (s.length === "long" && v.durationSec <= 1200) return false;

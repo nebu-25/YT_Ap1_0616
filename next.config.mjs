@@ -7,8 +7,11 @@ const nextConfig = {
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "i.ytimg.com" }, // 영상 썸네일
+      // 댓글 작성자 프로필 이미지 (호스트가 케이스마다 다름)
       { protocol: "https", hostname: "yt3.ggpht.com" },
+      { protocol: "https", hostname: "yt3.googleusercontent.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import useSWR from "swr";
 import type { CommentsResponse, VideoItem } from "@/lib/types";
 import { formatCount } from "@/lib/metrics";
@@ -85,8 +86,7 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
 
           {data?.items.map((c) => (
             <div className="comment" key={c.id}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.authorImage} alt={c.author} />
+              <Image src={c.authorImage} alt={c.author} width={36} height={36} />
               <div>
                 <div className="c-author">{c.author}</div>
                 <div className="c-text">{c.text}</div>
