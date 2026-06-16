@@ -284,13 +284,9 @@ export const CURATED_TOPICS = {
       en: "tech AI semiconductor gadget review software",
       ja: "IT テクノロジー AI 半導体 ガジェット レビュー",
       de: "Technik KI Halbleiter Gadget Test Software",
-      fr: "tech IA intelligence artificielle semi-conducteur informatique",
       es: "tecnología IA inteligencia artificial chip review software",
-      pt: "tecnologia IA inteligência artificial semicondutor review",
       ru: "технологии ИИ искусственный интеллект процессор обзор",
       "zh-Hant": "科技 人工智慧 半導體 評測 軟體",
-      vi: "công nghệ AI trí tuệ nhân tạo chip đánh giá",
-      id: "teknologi AI kecerdasan buatan semikonduktor ulasan",
     } as Record<string, string>,
   },
   space: {
@@ -300,13 +296,9 @@ export const CURATED_TOPICS = {
       en: "space astronomy universe telescope NASA black hole cosmos",
       ja: "宇宙 天文学 望遠鏡 NASA ブラックホール 銀河",
       de: "Weltraum Astronomie Universum Teleskop NASA schwarzes Loch",
-      fr: "espace astronomie univers télescope NASA trou noir",
       es: "espacio astronomía universo telescopio NASA agujero negro",
-      pt: "espaço astronomia universo telescópio NASA buraco negro",
       ru: "космос астрономия вселенная телескоп NASA чёрная дыра",
       "zh-Hant": "太空 天文學 宇宙 望遠鏡 NASA 黑洞",
-      vi: "vũ trụ thiên văn học kính viễn vọng NASA hố đen",
-      id: "luar angkasa astronomi alam semesta teleskop NASA lubang hitam",
     } as Record<string, string>,
   },
 } as const;
@@ -317,23 +309,24 @@ export function isCuratedTopic(v: string): v is CuratedTopic {
   return v in CURATED_TOPICS;
 }
 
-/** 지역(regionCode) → 검색 언어(relevanceLanguage) 매핑. 미지정 지역은 영어. */
+/**
+ * 지역(regionCode) → 검색 언어(relevanceLanguage) 매핑.
+ * 지원 언어: ko·en·ja·de·es·ru·zh-Hant(만다린). 미지정 지역은 영어 폴백.
+ */
 const LANG_BY_REGION: Record<string, string> = {
   KR: "ko",
-  JP: "ja",
-  DE: "de",
-  FR: "fr",
-  BR: "pt",
-  MX: "es",
-  RU: "ru",
-  TW: "zh-Hant",
-  VN: "vi",
-  ID: "id",
   US: "en",
+  JP: "ja",
   GB: "en",
+  DE: "de",
+  IN: "en", // 인도 유튜브는 영어 콘텐츠 비중이 큼
   CA: "en",
   AU: "en",
-  IN: "en",
+  TW: "zh-Hant", // 만다린(번체)
+  MX: "es",
+  RU: "ru",
+  ES: "es",
+  AR: "es",
 };
 
 export async function fetchCurated(

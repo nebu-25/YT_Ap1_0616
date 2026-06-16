@@ -1,4 +1,4 @@
-import type { Category, VideoItem } from "./types";
+import type { Category, CommentItem, VideoItem } from "./types";
 
 export interface CountDatum {
   name: string;
@@ -23,6 +23,20 @@ function tokenize(text: string): string[] {
     .split(/[^0-9a-z가-힣]+/i)
     .map((t) => t.trim())
     .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t));
+}
+
+/** 댓글 본문 토큰의 빈도 TopN (한 댓글 내 중복 토큰은 1회만 카운트) */
+export function commentKeywordFrequency(
+  comments: CommentItem[],
+  topN = 16
+): CountDatum[] {
+  const map = new Map<string, number>();
+  for (const c of comments) {
+    for (const t of new Set(tokenize(c.text))) {
+      map.set(t, (map.get(t) || 0) + 1);
+    }
+  }
+  return toSortedTop(map, topN);
 }
 
 /** 채널 등장 빈도 TopN */

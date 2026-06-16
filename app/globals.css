@@ -564,12 +564,72 @@ input[type="number"] {
   gap: 10px;
 }
 
+.drawer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+
+.seg {
+  display: flex;
+  gap: 6px;
+}
+
 .drawer .drawer-body {
   overflow-y: auto;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* 댓글 분석 뷰 */
+.comment-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comment-analysis section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-analysis h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.mini-comment {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mini-comment .mini-metric {
+  flex-shrink: 0;
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mini-comment .mini-text {
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mini-comment .mini-text b {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .comment {
