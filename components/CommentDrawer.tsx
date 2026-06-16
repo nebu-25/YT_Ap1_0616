@@ -17,6 +17,8 @@ interface Props {
 export default function CommentDrawer({ video, apiKey, onClose }: Props) {
   const [order, setOrder] = useState<"relevance" | "time">("relevance");
   const [mode, setMode] = useState<"list" | "analysis">("list");
+  // 분석에서 키워드 칩을 누르면 해당 단어 포함 댓글만 목록에 표시 (소문자 저장)
+  const [filter, setFilter] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   // Esc로 닫기 + 열릴 때 닫기 버튼에 포커스 + 닫힐 때 직전 포커스 복원
@@ -41,6 +43,14 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
   );
 
   const items = data?.disabled ? [] : data?.items ?? [];
+  const shown = filter
+    ? items.filter((c) => c.text.toLowerCase().includes(filter))
+    : items;
+
+  const pickKeyword = (name: string) => {
+    setFilter(name.toLowerCase());
+    setMode("list");
+  };
 
   return (
     <>
@@ -138,11 +148,30 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
               items={items}
               total={video.comments}
               order={order}
+              onPickKeyword={pickKeyword}
             />
           )}
 
+          {mode === "list" && filter && (
+            <div className="filter-chip">
+              <span>
+                🔎 “<b>{filter}</b>” 포함 {shown.length}개
+              </span>
+              <button className="btn ghost" onClick={() => setFilter(null)}>
+                전체 보기
+              </button>
+            </div>
+          )}
+
           {mode === "list" &&
-            items.map((c) => (
+            !isLoading &&
+            filter &&
+            shown.length === 0 && (
+              <div className="muted">“{filter}” 포함 댓글이 없습니다.</div>
+            )}
+
+          {mode === "list" &&
+            shown.map((c) => (
               <div className="comment" key={c.id}>
                 <Image
                   src={c.authorImage}
@@ -171,10 +200,12 @@ function CommentAnalysis({
   items,
   total,
   order,
+  onPickKeyword,
 }: {
   items: CommentItem[];
   total: number;
   order: "relevance" | "time";
+  onPickKeyword: (name: string) => void;
 }) {
   const orderLabel = order === "relevance" ? "관련성순" : "최신순";
   const partial = items.length < total;
@@ -231,18 +262,20 @@ function CommentAnalysis({
         {keywords.length > 0 ? (
           <div className="chips">
             {keywords.map((k) => (
-              <span
-                className="chip"
+              <button
+                type="button"
+                className="chip chip-btn"
                 key={k.name}
                 style={{
                   fontSize: 12 + (k.count / max) * 6,
                   opacity: 0.6 + (k.count / max) * 0.4,
                 }}
-                title={`${k.count}개 댓글에서 등장`}
+                title={`“${k.name}” 포함 댓글 보기 (${k.count}개 댓글에서 등장)`}
+                onClick={() => onPickKeyword(k.name)}
               >
                 {k.name}
                 <b>{k.count}</b>
-              </span>
+              </button>
             ))}
           </div>
         ) : (

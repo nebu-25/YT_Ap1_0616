@@ -770,6 +770,36 @@ input[type="number"] {
   font-variant-numeric: tabular-nums;
 }
 
+/* 클릭 가능한 키워드 칩 (댓글 분석 → 필터) */
+.chip-btn {
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.chip-btn:hover {
+  border-color: var(--accent-2);
+  background: var(--panel);
+}
+
+/* 댓글 목록 키워드 필터 배너 */
+.filter-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.filter-chip b {
+  color: var(--accent-2);
+}
+
 /* Toast (U8) */
 .toast {
   position: fixed;
