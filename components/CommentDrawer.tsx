@@ -35,7 +35,7 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
 
   const { data, error, isLoading } = useSWR<CommentsResponse>(
     apiKey
-      ? [`/api/comments?videoId=${video.id}&order=${order}&max=50`, apiKey]
+      ? [`/api/comments?videoId=${video.id}&order=${order}&max=100`, apiKey]
       : null,
     keyedFetcher
   );

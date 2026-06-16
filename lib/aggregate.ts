@@ -19,8 +19,9 @@ const STOPWORDS = new Set([
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    // 한글/영문/숫자만 남기고 구분
-    .split(/[^0-9a-z가-힣]+/i)
+    // 유니코드 문자/숫자만 토큰으로 분리 (한글·라틴·키릴·CJK 등 지원).
+    // 참고: 일본어·중국어는 공백이 없어 형태소 분석 없이 런(run) 단위로 묶인다.
+    .split(/[^\p{L}\p{N}]+/u)
     .map((t) => t.trim())
     .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t));
 }
