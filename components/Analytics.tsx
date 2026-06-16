@@ -63,7 +63,7 @@ export default function Analytics({ videos, categories }: Props) {
         <HBar data={lengths} color="#a06bff" multicolor />
       </ChartCard>
 
-      <ChartCard title="🕐 업로드 시간대 분포 (UTC)">
+      <ChartCard title="🕐 업로드 시간대 분포 (내 시간대)">
         <VBar data={hours} color="#ff3b5c" />
       </ChartCard>
     </div>

@@ -74,11 +74,11 @@ export function lengthDistribution(videos: VideoItem[]): CountDatum[] {
   return Object.entries(buckets).map(([name, count]) => ({ name, count }));
 }
 
-/** 업로드 시간대(0~23시, UTC) 히스토그램 */
+/** 업로드 시간대(0~23시, 뷰어 로컬 시간대) 히스토그램 */
 export function uploadHourDistribution(videos: VideoItem[]): CountDatum[] {
   const hours = new Array(24).fill(0);
   for (const v of videos) {
-    const h = new Date(v.publishedAt).getUTCHours();
+    const h = new Date(v.publishedAt).getHours();
     if (!Number.isNaN(h)) hours[h]++;
   }
   return hours.map((count, h) => ({ name: `${h}시`, count }));

@@ -113,6 +113,32 @@ input {
   font-weight: 600;
 }
 
+/* 모바일: 헤더를 세로로 쌓고 API 키 입력창이 가로로 넘치지 않게 */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  /* 헤더 우측 컬럼(인라인 margin-left:auto)을 전체 폭으로 */
+  .header > div:last-child {
+    margin-left: 0 !important;
+    align-items: stretch !important;
+  }
+  .apikey-bar {
+    justify-content: flex-start;
+  }
+  /* 인라인 min-width:280 오버라이드 → 화면 폭에 맞춰 축소 */
+  .apikey-bar input {
+    min-width: 0 !important;
+    flex: 1 1 180px;
+  }
+  .apikey-tip {
+    text-align: left;
+    max-width: none;
+  }
+}
+
 .quota-badge {
   font-size: 11px;
   color: var(--muted);
