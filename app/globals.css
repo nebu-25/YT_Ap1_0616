@@ -592,6 +592,28 @@ input[type="number"] {
   gap: 16px;
 }
 
+.cs-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.cs-stats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.cs-stats b {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .comment-analysis section {
   display: flex;
   flex-direction: column;

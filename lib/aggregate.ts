@@ -16,15 +16,41 @@ const STOPWORDS = new Set([
   "영상", "공식", "최신", "라이브", "다시보기", "모음", "shorts", "쇼츠",
 ]);
 
+/**
+ * 한글 자모만으로 이뤄진 토큰(ㅋㅋㅋ·ㅎㅎ·ㅠㅠ 등 웃음/감탄)을 판별.
+ * 완성형 음절(가-힣)이 없고 호환/조합 자모(U+1100–11FF, U+3130–318F)만 있으면 노이즈로 본다.
+ */
+const JAMO_ONLY = new RegExp(
+  "^[\\u1100-\\u11FF\\u3130-\\u318F\\uA960-\\uA97F\\uD7B0-\\uD7FF]+$"
+);
+
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ") // URL 제거
     // 유니코드 문자/숫자만 토큰으로 분리 (한글·라틴·키릴·CJK 등 지원).
     // 참고: 일본어·중국어는 공백이 없어 형태소 분석 없이 런(run) 단위로 묶인다.
     .split(/[^\p{L}\p{N}]+/u)
     .map((t) => t.trim())
-    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t));
+    .filter(
+      (t) =>
+        t.length >= 2 &&
+        !STOPWORDS.has(t) &&
+        !/^\d+$/.test(t) &&
+        !JAMO_ONLY.test(t)
+    );
 }
+
+/** 댓글에서만 추가로 거르는 흔한 필러/관용어 (영상 제목 집계에는 미적용) */
+const COMMENT_STOPWORDS = new Set([
+  // en
+  "lol", "lmao", "lmfao", "omg", "haha", "hahaha", "wow", "yeah", "yes", "no",
+  "pls", "plz", "bro",
+  // ko
+  "이거", "그거", "저거", "이건", "그건", "저건", "근데", "그래서", "그래도",
+  "역시", "완전", "약간", "그치", "ㅋㅋ", "ㅎㅎ", "구독", "좋아요", "감사합니다",
+  "감사해요", "최고", "사랑해요",
+]);
 
 /** 댓글 본문 토큰의 빈도 TopN (한 댓글 내 중복 토큰은 1회만 카운트) */
 export function commentKeywordFrequency(
@@ -33,7 +59,8 @@ export function commentKeywordFrequency(
 ): CountDatum[] {
   const map = new Map<string, number>();
   for (const c of comments) {
-    for (const t of new Set(tokenize(c.text))) {
+    const tokens = tokenize(c.text).filter((t) => !COMMENT_STOPWORDS.has(t));
+    for (const t of new Set(tokens)) {
       map.set(t, (map.get(t) || 0) + 1);
     }
   }

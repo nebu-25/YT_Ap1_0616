@@ -132,7 +132,7 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
             !isLoading && <div className="muted">댓글이 없습니다.</div>}
 
           {!isLoading && !error && items.length > 0 && mode === "analysis" && (
-            <CommentAnalysis items={items} />
+            <CommentAnalysis items={items} total={video.comments} />
           )}
 
           {mode === "list" &&
@@ -160,8 +160,14 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
   );
 }
 
-/** 드로어에 불러온 댓글(최대 50개)로 키워드·상위 댓글 분석 */
-function CommentAnalysis({ items }: { items: CommentItem[] }) {
+/** 드로어에 불러온 댓글(최대 100개)로 요약 통계·키워드·상위 댓글 분석 */
+function CommentAnalysis({
+  items,
+  total,
+}: {
+  items: CommentItem[];
+  total: number;
+}) {
   const keywords = useMemo(() => commentKeywordFrequency(items, 16), [items]);
   const topLiked = useMemo(
     () => [...items].sort((a, b) => b.likes - a.likes).slice(0, 5),
@@ -175,12 +181,33 @@ function CommentAnalysis({ items }: { items: CommentItem[] }) {
         .slice(0, 5),
     [items]
   );
+  const stats = useMemo(() => {
+    const n = items.length;
+    const totalLikes = items.reduce((s, c) => s + c.likes, 0);
+    const withReplies = items.filter((c) => c.replyCount > 0).length;
+    return {
+      avgLikes: Math.round(totalLikes / n),
+      repliedPct: Math.round((withReplies / n) * 100),
+    };
+  }, [items]);
   const max = keywords[0]?.count || 1;
 
   return (
     <div className="comment-analysis">
-      <div className="muted" style={{ fontSize: 11 }}>
-        불러온 댓글 {items.length}개 기준
+      <div className="cs-stats">
+        <div>
+          <span className="muted">분석 대상</span>
+          <b>{items.length}개</b>
+          <span className="muted">/ 전체 {formatCount(total)}</span>
+        </div>
+        <div>
+          <span className="muted">평균 좋아요</span>
+          <b>{formatCount(stats.avgLikes)}</b>
+        </div>
+        <div>
+          <span className="muted">답글 있는 댓글</span>
+          <b>{stats.repliedPct}%</b>
+        </div>
       </div>
 
       <section>
