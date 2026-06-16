@@ -22,3 +22,26 @@ export const keyedFetcher = async ([url, apiKey]: [string, string]) => {
   addQuota(cost);
   return data;
 };
+
+/**
+ * AI 분석용 fetcher. 키 배열 [url, ytKey, aiKey]을 받아 두 키를 각각 헤더로 전달한다.
+ * 댓글 수집은 YouTube 키, 요약·감정 분석은 Gemini 키(BYO). aiKey가 바뀌면 자동 재요청.
+ */
+export const aiFetcher = async ([url, ytKey, aiKey]: [
+  string,
+  string,
+  string,
+]) => {
+  const res = await fetch(url, {
+    headers: {
+      ...(ytKey ? { "x-youtube-api-key": ytKey } : {}),
+      ...(aiKey ? { "x-ai-api-key": aiKey } : {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "요청에 실패했습니다.");
+  }
+  addQuota(Number(res.headers.get("x-yt-quota-cost") || 0));
+  return data;
+};

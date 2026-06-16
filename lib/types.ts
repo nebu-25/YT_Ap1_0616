@@ -40,6 +40,14 @@ export interface CommentsResponse {
   items: CommentItem[];
 }
 
+/** AI(Gemini) 댓글 분석 결과. disabled면 댓글이 없거나 비활성. */
+export interface AiAnalysis {
+  disabled?: boolean;
+  summary: string;
+  sentiment: { positive: number; negative: number; neutral: number };
+  themes: string[];
+}
+
 /** 클라이언트로 전달되는 정규화된 에러 형태 */
 export interface ApiError {
   error: string;

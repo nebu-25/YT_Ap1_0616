@@ -10,12 +10,14 @@ import VideoList from "@/components/VideoList";
 import CommentDrawer from "@/components/CommentDrawer";
 import Analytics from "@/components/Analytics";
 import ApiKeyBar from "@/components/ApiKeyBar";
+import AiKeyBar from "@/components/AiKeyBar";
 import Sidebar from "@/components/Sidebar";
 import QuotaBadge from "@/components/QuotaBadge";
 import { downloadCsv, videosToCsv } from "@/lib/csv";
 import { velocity } from "@/lib/metrics";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
+import { useAiKey } from "@/lib/useAiKey";
 import { isCuratedTopic, type CuratedTopic } from "@/lib/topics";
 import type { Category, SortKey, LengthBucket, VideoItem } from "@/lib/types";
 
@@ -33,6 +35,7 @@ const DEFAULT_STATE: ControlsState = {
 
 export default function Home() {
   const { apiKey, setApiKey, loaded } = useApiKey();
+  const { aiKey, setAiKey } = useAiKey();
   const [state, setState] = useState<ControlsState>(DEFAULT_STATE);
   const [max, setMax] = useState(100);
   // topic이 null이면 일반 급상승(trending), 값이 있으면 큐레이션 모드
@@ -180,6 +183,7 @@ export default function Home() {
           }}
         >
           <ApiKeyBar apiKey={apiKey} onSave={setApiKey} />
+          {apiKey ? <AiKeyBar aiKey={aiKey} onSave={setAiKey} /> : null}
           {apiKey ? <QuotaBadge /> : null}
         </div>
       </div>
@@ -308,6 +312,7 @@ export default function Home() {
         <CommentDrawer
           video={active}
           apiKey={apiKey}
+          aiKey={aiKey}
           onClose={() => setActive(null)}
         />
       )}

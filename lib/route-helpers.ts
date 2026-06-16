@@ -6,6 +6,11 @@ export function getRequestApiKey(req: NextRequest): string {
   return req.headers.get("x-youtube-api-key")?.trim() || "";
 }
 
+/** 사용자가 입력한 AI(Gemini) 키를 요청 헤더에서 추출. (AI 분석 라우트 전용) */
+export function getRequestAiKey(req: NextRequest): string {
+  return req.headers.get("x-ai-api-key")?.trim() || "";
+}
+
 const NO_STORE = { "Cache-Control": "no-store" };
 
 /** 키 누락 시 401 응답 (라우트에서 공통 사용) */

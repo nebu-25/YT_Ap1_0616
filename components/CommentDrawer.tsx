@@ -3,18 +3,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import useSWR from "swr";
-import type { CommentItem, CommentsResponse, VideoItem } from "@/lib/types";
+import type {
+  AiAnalysis,
+  CommentItem,
+  CommentsResponse,
+  VideoItem,
+} from "@/lib/types";
 import { formatCount } from "@/lib/metrics";
 import { commentKeywordFrequency } from "@/lib/aggregate";
-import { keyedFetcher } from "@/lib/fetcher";
+import { aiFetcher, keyedFetcher } from "@/lib/fetcher";
 
 interface Props {
   video: VideoItem;
   apiKey: string;
+  aiKey: string;
   onClose: () => void;
 }
 
-export default function CommentDrawer({ video, apiKey, onClose }: Props) {
+export default function CommentDrawer({
+  video,
+  apiKey,
+  aiKey,
+  onClose,
+}: Props) {
   const [order, setOrder] = useState<"relevance" | "time">("relevance");
   const [mode, setMode] = useState<"list" | "analysis">("list");
   // 분석에서 키워드 칩을 누르면 해당 단어 포함 댓글만 목록에 표시 (소문자 저장)
@@ -144,12 +155,20 @@ export default function CommentDrawer({ video, apiKey, onClose }: Props) {
             !isLoading && <div className="muted">댓글이 없습니다.</div>}
 
           {!isLoading && !error && items.length > 0 && mode === "analysis" && (
-            <CommentAnalysis
-              items={items}
-              total={video.comments}
-              order={order}
-              onPickKeyword={pickKeyword}
-            />
+            <>
+              <AiSummary
+                videoId={video.id}
+                order={order}
+                ytKey={apiKey}
+                aiKey={aiKey}
+              />
+              <CommentAnalysis
+                items={items}
+                total={video.comments}
+                order={order}
+                onPickKeyword={pickKeyword}
+              />
+            </>
           )}
 
           {mode === "list" && filter && (
@@ -311,5 +330,99 @@ function CommentAnalysis({
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * Gemini(BYO 키)로 댓글 요약 + 감정 분석 + 핵심 주제.
+ * aiKey가 없으면 호출하지 않고 안내만 표시한다(선택 기능).
+ */
+function AiSummary({
+  videoId,
+  order,
+  ytKey,
+  aiKey,
+}: {
+  videoId: string;
+  order: "relevance" | "time";
+  ytKey: string;
+  aiKey: string;
+}) {
+  const { data, error, isLoading } = useSWR<AiAnalysis>(
+    aiKey
+      ? [
+          `/api/comments/analyze?videoId=${videoId}&order=${order}`,
+          ytKey,
+          aiKey,
+        ]
+      : null,
+    aiFetcher
+  );
+
+  if (!aiKey) {
+    return (
+      <div className="banner info">
+        🤖 AI 요약·감정 분석을 쓰려면 우측 상단에 <b>Gemini 키(무료)</b>를
+        입력하세요. (선택 기능)
+      </div>
+    );
+  }
+  if (isLoading) return <div className="muted">🤖 AI 분석 중…</div>;
+  if (error)
+    return <div className="banner error">{(error as Error).message}</div>;
+  if (!data || data.disabled) return null;
+
+  const s = data.sentiment;
+  const total = Math.max(1, s.positive + s.negative + s.neutral);
+  const pct = (n: number) => Math.round((n / total) * 100);
+
+  return (
+    <section className="comment-analysis">
+      <h4>🤖 AI 요약</h4>
+      <p className="cs-note" style={{ lineHeight: 1.6 }}>
+        {data.summary}
+      </p>
+
+      <h4>📊 감정 분석</h4>
+      <div
+        style={{
+          display: "flex",
+          height: 14,
+          borderRadius: 7,
+          overflow: "hidden",
+          margin: "4px 0 6px",
+        }}
+      >
+        <span
+          style={{ width: `${pct(s.positive)}%`, background: "#2e7d32" }}
+          title={`긍정 ${pct(s.positive)}%`}
+        />
+        <span
+          style={{ width: `${pct(s.neutral)}%`, background: "#9e9e9e" }}
+          title={`중립 ${pct(s.neutral)}%`}
+        />
+        <span
+          style={{ width: `${pct(s.negative)}%`, background: "#c62828" }}
+          title={`부정 ${pct(s.negative)}%`}
+        />
+      </div>
+      <div className="muted" style={{ fontSize: 12 }}>
+        긍정 {pct(s.positive)}% · 중립 {pct(s.neutral)}% · 부정 {pct(s.negative)}
+        %
+      </div>
+
+      {data.themes?.length > 0 && (
+        <section>
+          <h4>🏷️ 핵심 주제</h4>
+          <div className="chips">
+            {data.themes.map((t) => (
+              <span className="chip" key={t}>
+                {t}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+    </section>
   );
 }
