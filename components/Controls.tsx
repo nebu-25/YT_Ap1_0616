@@ -20,7 +20,6 @@ interface Props {
   categories: Category[];
   preset: Preset;
   resultCount: number;
-  onPreset: (p: "top100" | "it" | "space") => void;
   onChange: (patch: Partial<ControlsState>) => void;
   onExport: () => void;
   onRefresh: () => void;
@@ -46,34 +45,12 @@ export default function Controls({
   categories,
   preset,
   resultCount,
-  onPreset,
   onChange,
   onExport,
   onRefresh,
 }: Props) {
   return (
     <div className="controls">
-      <div className="preset-group">
-        <button
-          className={`btn ${preset === "top100" ? "active" : ""}`}
-          onClick={() => onPreset("top100")}
-        >
-          🔥 급상승 TOP 100
-        </button>
-        <button
-          className={`btn ${preset === "it" ? "active" : ""}`}
-          onClick={() => onPreset("it")}
-        >
-          💻 IT 30
-        </button>
-        <button
-          className={`btn ${preset === "space" ? "active" : ""}`}
-          onClick={() => onPreset("space")}
-        >
-          🔭 우주/천문 30
-        </button>
-      </div>
-
       <div className="field">
         <label>국가</label>
         <select

@@ -10,6 +10,7 @@ import VideoList from "@/components/VideoList";
 import CommentDrawer from "@/components/CommentDrawer";
 import Analytics from "@/components/Analytics";
 import ApiKeyBar from "@/components/ApiKeyBar";
+import Sidebar from "@/components/Sidebar";
 import { downloadCsv, videosToCsv } from "@/lib/csv";
 import { keyedFetcher } from "@/lib/fetcher";
 import { useApiKey } from "@/lib/useApiKey";
@@ -130,70 +131,71 @@ export default function Home() {
         </div>
       ) : null}
 
-      {apiKey ? (
-        <Controls
-          state={state}
-          categories={categories}
-          preset={preset}
-          resultCount={videos.length}
-          onPreset={onPreset}
-          onChange={onChange}
-          onExport={onExport}
-          onRefresh={() => mutate()}
-        />
-      ) : null}
-
-      {error && (
-        <div className="banner error">⚠️ {(error as Error).message}</div>
-      )}
-
-      {apiKey &&
-        !isLoading &&
-        !error &&
-        trendData?.fallback &&
-        rawVideos.length > 0 && (
-        <div className="banner info">
-          ℹ️ 이 지역은 해당 카테고리 급상승 차트를 직접 지원하지 않아, 전체 급상승
-          영상에서 카테고리를 추출했습니다.
-        </div>
-      )}
-
-      {apiKey && !isLoading && !error && rawVideos.length === 0 && (
-        <div className="banner info">
-          결과가 없습니다. 이 지역의 전체 급상승 영상 중 선택한 카테고리에 해당하는
-          영상이 없을 수 있습니다. 다른 카테고리나 국가를 선택해 보세요.
-        </div>
-      )}
-
       {apiKey && (
-        <>
-          <div className="tabs">
-            <button
-              className={`tab ${tab === "list" ? "active" : ""}`}
-              onClick={() => setTab("list")}
-            >
-              영상 목록 ({videos.length})
-            </button>
-            <button
-              className={`tab ${tab === "analytics" ? "active" : ""}`}
-              onClick={() => setTab("analytics")}
-            >
-              분석
-            </button>
-          </div>
+        <div className="layout">
+          <Sidebar preset={preset} onPreset={onPreset} />
 
-          {isLoading ? (
-            <Skeletons view={state.view} />
-          ) : tab === "list" ? (
-            <VideoList
-              videos={videos}
-              view={state.view}
-              onOpenComments={setActive}
+          <section className="content">
+            <Controls
+              state={state}
+              categories={categories}
+              preset={preset}
+              resultCount={videos.length}
+              onChange={onChange}
+              onExport={onExport}
+              onRefresh={() => mutate()}
             />
-          ) : (
-            <Analytics videos={videos} categories={categories} />
-          )}
-        </>
+
+            {error && (
+              <div className="banner error">⚠️ {(error as Error).message}</div>
+            )}
+
+            {!isLoading &&
+              !error &&
+              trendData?.fallback &&
+              rawVideos.length > 0 && (
+                <div className="banner info">
+                  ℹ️ 이 지역은 해당 카테고리 급상승 차트를 직접 지원하지 않아,
+                  전체 급상승 영상에서 카테고리를 추출했습니다.
+                </div>
+              )}
+
+            {!isLoading && !error && rawVideos.length === 0 && (
+              <div className="banner info">
+                결과가 없습니다. 이 지역의 전체 급상승 영상 중 선택한 카테고리에
+                해당하는 영상이 없을 수 있습니다. 다른 카테고리나 국가를 선택해
+                보세요.
+              </div>
+            )}
+
+            <div className="tabs">
+              <button
+                className={`tab ${tab === "list" ? "active" : ""}`}
+                onClick={() => setTab("list")}
+              >
+                영상 목록 ({videos.length})
+              </button>
+              <button
+                className={`tab ${tab === "analytics" ? "active" : ""}`}
+                onClick={() => setTab("analytics")}
+              >
+                분석
+              </button>
+            </div>
+
+            {isLoading ? (
+              <Skeletons view={state.view} />
+            ) : tab === "list" ? (
+              <VideoList
+                videos={videos}
+                view={state.view}
+                onOpenComments={setActive}
+              />
+            ) : (
+              <Analytics videos={videos} categories={categories} />
+            )}
+          </section>
+        </div>
       )}
 
       {active && (
